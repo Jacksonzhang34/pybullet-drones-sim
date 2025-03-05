@@ -40,7 +40,7 @@ DEFAULT_COLAB = False
 
 DEFAULT_OBS = ObservationType('kin') # 'kin' or 'rgb'
 DEFAULT_ACT = ActionType('one_d_rpm') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one_d_pid'
-DEFAULT_AGENTS = 2
+DEFAULT_AGENTS = 3
 DEFAULT_MA = False
 
 def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True):
@@ -76,7 +76,8 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
 
     #### Target cumulative rewards (problem-dependent) ##########
     if DEFAULT_ACT == ActionType.ONE_D_RPM:
-        target_reward = 474.15 if not multiagent else 949.5
+        # target_reward = 474.15 if not multiagent else 949.5
+        target_reward = 474.15 if not multiagent else 1000
     else:
         target_reward = 467. if not multiagent else 920.
     callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=target_reward,
