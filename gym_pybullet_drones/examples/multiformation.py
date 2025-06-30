@@ -171,16 +171,13 @@ def run(drone=DEFAULT_DRONE,
             action[i, :], _, _ = ctrl[i].computeControlFromState(
                 control_timestep=env.CTRL_TIMESTEP,
                 state=obs[i],
-                target_pos=np.array([x_des, y_des, z_des]),
-                target_rpy=np.array([0, 0, 0])
+                target_pos=np.array([x_des, y_des, z_des], dtype=np.float64),
+                target_rpy=np.zeros(3, dtype=np.float64)
             )
 
             # Log with a 12-element control vector (pad with zeros)
-            control_vector = np.array([
-                x_des, y_des, z_des,  # Desired position (3)
-                0, 0, 0,             # Desired orientation placeholders (3)
-                0, 0, 0, 0, 0, 0      # Extra placeholders to reach 12 elements (6)
-            ])
+            control_vector = np.zeros(12, dtype=np.float64)
+            control_vector[0:3] = [x_des, y_des, z_des]  # Desired position
             logger.log(
                 drone=i,
                 timestamp=sim_time,
