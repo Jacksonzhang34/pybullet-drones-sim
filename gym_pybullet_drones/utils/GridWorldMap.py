@@ -1,6 +1,7 @@
 import numpy as np
 from enum import Enum
 import matplotlib.pyplot as plt
+from matplotlib import colors
 
 class CellState(Enum):
     """Enum for the possible states of a cell in the grid world."""
@@ -46,10 +47,10 @@ class GridWorldMap:
                            dtype=int)
         
         # Keep track of objects of interest positions
-        self.ooi_positions = []  # List of (grid_x, grid_y) positions
+        self.ooi_positions = set()  # Set of (grid_x, grid_y) positions
         
         # Keep track of obstacle positions
-        self.obstacle_positions = []  # List of (grid_x, grid_y) positions
+        self.obstacle_positions = set()  # List of (grid_x, grid_y) positions
         
     def continuous_to_grid(self, x: float, y: float) -> tuple:
         """Convert continuous coordinates to grid coordinates.
@@ -81,7 +82,7 @@ class GridWorldMap:
         return x, y, z
     
     def update_cell(self, x: float, y: float, state: CellState):
-        """Update the state of a cell based on continuous coordinates.
+        """Update the state of a cell using continuous coordinates.
         
         Args:
             x: X-coordinate in meters
@@ -94,10 +95,10 @@ class GridWorldMap:
         # Keep track of special cells
         if state == CellState.OBJECT_OF_INTEREST:
             if (grid_x, grid_y) not in self.ooi_positions:
-                self.ooi_positions.append((grid_x, grid_y))
+                self.ooi_positions.add((grid_x, grid_y))
         elif state == CellState.OBSTACLE:
             if (grid_x, grid_y) not in self.obstacle_positions:
-                self.obstacle_positions.append((grid_x, grid_y))
+                self.obstacle_positions.add((grid_x, grid_y))
     
     def get_cell_state(self, x: float, y: float) -> CellState:
         """Get the state of a cell based on continuous coordinates.
@@ -123,7 +124,7 @@ class GridWorldMap:
         grid_x, grid_y = self.continuous_to_grid(drone_x, drone_y)
         
         # Update cells within the FOV radius
-        for dx in range(-fov_radius, fov_radius + 1):
+        for dx in range(-fov_radius, fov_radius + 1): # making the assumption that the grid size must be at least one meter
             for dy in range(-fov_radius, fov_radius + 1):
                 # Check if the cell is within the circular FOV
                 if dx**2 + dy**2 <= fov_radius**2:
@@ -133,7 +134,7 @@ class GridWorldMap:
                     if 0 <= nx < self.grid_width and 0 <= ny < self.grid_length:
                         # Only update if the cell is UNKNOWN
                         if self.grid[nx, ny] == CellState.UNKNOWN.value:
-                            self.grid[nx, ny] = CellState.EXPLORED_EMPTY.value
+                            self.grid[nx, ny] = CellState.EXPLORED_EMPTY.value # careful using explored_empty for bfs, might miss label unvisited cells as explored
     
     def is_within_bounds(self, grid_x: int, grid_y: int) -> bool:
         """Check if grid coordinates are within the map bounds.
@@ -156,9 +157,9 @@ class GridWorldMap:
         plt.figure(figsize=(10, 10))
         
         # Create a colormap for the grid
-        cmap = plt.cm.colors.ListedColormap(['lightgray', 'white', 'black', 'red'])
+        cmap = colors.ListedColormap(['lightgray', 'white', 'black', 'red'])
         bounds = [0, 1, 2, 3, 4]
-        norm = plt.cm.colors.BoundaryNorm(bounds, cmap.N)
+        norm = colors.BoundaryNorm(bounds, cmap.N)
         
         # Plot the grid
         plt.imshow(self.grid.T, cmap=cmap, norm=norm, origin='lower')

@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Deque
+from collections import deque
 import os
 
 from gym_pybullet_drones.utils.GridWorldMap import GridWorldMap, CellState
@@ -23,7 +24,7 @@ class DroneState:
         self.y = initial_y
         self.z = initial_z
         self.assigned_ooi = None  # ID of the assigned object of interest
-        self.current_path = []  # List of (grid_x, grid_y) waypoints
+        self.current_path = deque([])  #Deque of (grid_x, grid_y) waypoints
         
     def update_position(self, x: float, y: float, z: float):
         """Update the drone's position.
@@ -45,7 +46,7 @@ class DroneState:
         """
         self.assigned_ooi = ooi_id
         
-    def set_path(self, path: List[Tuple[int, int]]):
+    def set_path(self, path: Deque[Tuple[int, int]]):
         """Set the path for the drone to follow.
         
         Args:
@@ -66,7 +67,7 @@ class DroneState:
     def advance_path(self):
         """Remove the first waypoint from the path after reaching it."""
         if self.current_path:
-            self.current_path.pop(0)
+            self.current_path.popleft()
 
 
 class CentralizedPlanner:
@@ -92,13 +93,13 @@ class CentralizedPlanner:
         # Initialize the grid world map
         self.grid_map = GridWorldMap(env_width, env_length, cell_size, height_threshold)
         
-        # Parameters
-        self.fov_radius = fov_radius
+        # fov_radius should be the same as detection_range
+        self.fov_radius = fov_radius 
         self.detection_range = detection_range
         
         # Drones, objects, and obstacles
         self.drones: Dict[int, DroneState] = {}
-        self.objects_of_interest: Dict[int, ObjectOfInterest] = {}
+        self.oois: Dict[int, ObjectOfInterest] = {}
         self.obstacles: Dict[int, Obstacle] = {}
         
         # Tracking discovered objects
@@ -118,6 +119,8 @@ class CentralizedPlanner:
             initial_y: Initial Y-coordinate in meters
             initial_z: Initial Z-coordinate in meters
         """
+        if drone_id in self.drones:
+            raise ValueError(f"Drone with id {drone_id} already exists")
         self.drones[drone_id] = DroneState(drone_id, initial_x, initial_y, initial_z)
         
         # Mark the initial position as explored in the grid
@@ -139,7 +142,9 @@ class CentralizedPlanner:
             z: Z-coordinate in meters
             object_type: Type of the object
         """
-        self.objects_of_interest[object_id] = ObjectOfInterest(x, y, z, object_id, object_type)
+        if object_id in self.oois:
+            raise ValueError(f"OOI with id {object_id} already exists")
+        self.oois[object_id] = ObjectOfInterest(x, y, z, object_id, object_type)
         
     def add_obstacle(self, 
                     object_id: int, 
@@ -160,6 +165,9 @@ class CentralizedPlanner:
             length: Length of the obstacle in meters (y-axis)
             height: Height of the obstacle in meters (z-axis)
         """
+        if object_id in self.obstacles:
+            raise ValueError(f"Obstacle with id {object_id} already exists")
+
         self.obstacles[object_id] = Obstacle(x, y, z, object_id, width, length, height)
         
         # Mark the obstacle in the grid
@@ -191,7 +199,7 @@ class CentralizedPlanner:
             self.grid_map.update_fov(drone.x, drone.y, self.fov_radius)
             
             # Check for objects of interest within detection range
-            for ooi_id, ooi in self.objects_of_interest.items():
+            for ooi_id, ooi in self.oois.items():
                 if not ooi.discovered:
                     # Calculate distance to the object
                     distance = np.sqrt((drone.x - ooi.x)**2 + (drone.y - ooi.y)**2)
@@ -231,7 +239,7 @@ class CentralizedPlanner:
         fig = self.grid_map.visualize(drone_positions)
         
         # Mark objects of interest
-        for ooi in self.objects_of_interest.values():
+        for ooi in self.oois.values():
             if ooi.discovered:
                 grid_x, grid_y = self.grid_map.continuous_to_grid(ooi.x, ooi.y)
                 plt.plot(grid_x, grid_y, 'r*', markersize=10)
