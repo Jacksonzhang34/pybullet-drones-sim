@@ -78,8 +78,7 @@ class CentralizedPlanner:
                  env_length: float, 
                  cell_size: float,
                  height_threshold: float,
-                 fov_radius: int,
-                 detection_range: float):
+                 sensor_range: float):
         """Initialize the centralized planner.
         
         Args:
@@ -87,15 +86,14 @@ class CentralizedPlanner:
             env_length: Length of the environment in meters
             cell_size: Size of each grid cell in meters
             height_threshold: The fixed height at which drones operate
-            fov_radius: Field of view radius in grid cells
-            detection_range: Range within which drones can detect objects in meters
+            sensor_range: Range within which drones can detect objects in meters
         """
         # Initialize the grid world map
         self.grid_map = GridWorldMap(env_width, env_length, cell_size, height_threshold)
         
-        # fov_radius should be the same as detection_range
-        self.fov_radius = fov_radius 
-        self.detection_range = detection_range
+        # Store sensor parameters - derive discrete from continuous
+        self.sensor_range = sensor_range  # Continuous space (meters)
+        self.fov_cells = int(np.ceil(sensor_range / cell_size))  # Discrete space (grid cells)
         
         # Drones, objects, and obstacles
         self.drones: Dict[int, DroneState] = {}
@@ -196,7 +194,7 @@ class CentralizedPlanner:
         
         for drone_id, drone in self.drones.items():
             # Update the grid with cells in the drone's FOV
-            self.grid_map.update_fov(drone.x, drone.y, self.fov_radius)
+            self.grid_map.update_fov(drone.x, drone.y, self.fov_cells)
             
             # Check for objects of interest within detection range
             for ooi_id, ooi in self.oois.items():
@@ -204,7 +202,7 @@ class CentralizedPlanner:
                     # Calculate distance to the object
                     distance = np.sqrt((drone.x - ooi.x)**2 + (drone.y - ooi.y)**2)
                     
-                    if distance <= self.detection_range:
+                    if distance <= self.sensor_range:
                         # Object is detected
                         ooi.discover()
                         self.newly_discovered_oois.append(ooi_id)
@@ -217,7 +215,7 @@ class CentralizedPlanner:
                 # Calculate distance to the obstacle center
                 distance = np.sqrt((drone.x - obs.x)**2 + (drone.y - obs.y)**2)
                 
-                if distance <= self.detection_range + max(obs.width, obs.length)/2:
+                if distance <= self.sensor_range + max(obs.width, obs.length)/2:
                     # Obstacle is detected, update the grid map
                     self.grid_map.update_cell(obs.x, obs.y, CellState.OBSTACLE)
         

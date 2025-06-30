@@ -124,7 +124,7 @@ class GridWorldMap:
         grid_x, grid_y = self.continuous_to_grid(drone_x, drone_y)
         
         # Update cells within the FOV radius
-        for dx in range(-fov_radius, fov_radius + 1): # making the assumption that the grid size must be at least one meter
+        for dx in range(-fov_radius, fov_radius + 1):  # Create square grid around drone
             for dy in range(-fov_radius, fov_radius + 1):
                 # Check if the cell is within the circular FOV
                 if dx**2 + dy**2 <= fov_radius**2:
