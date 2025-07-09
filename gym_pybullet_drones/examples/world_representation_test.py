@@ -34,8 +34,7 @@ def main():
         env_length=ENV_LENGTH,
         cell_size=CELL_SIZE,
         height_threshold=HEIGHT_THRESHOLD,
-        fov_radius=FOV_RADIUS,
-        detection_range=DETECTION_RANGE
+        sensor_range=DETECTION_RANGE
     )
     
     # Add drones at different initial positions
